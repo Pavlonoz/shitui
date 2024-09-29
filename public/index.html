@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pavilion</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="particles.min.js"></script>
+</head>
+<body>
+    <div class="container">
+        <h1>Pavilion</h1>
+        <div id="connection-status">
+            <p>Connection: <span id="connection-text">Connected</span></p>
+            <div id="status-indicator" class="circle green"></div>
+        </div>
+        <div id="script-buttons"></div>
+    </div>
+    
+    <script>
+        // Polling for available scripts
+        function loadScriptButtons() {
+            fetch('http://localhost:8000/scripts')
+                .then(response => response.json())
+                .then(scripts => {
+                    const buttonsContainer = document.getElementById('script-buttons');
+                    buttonsContainer.innerHTML = ''; // Clear existing buttons
+                    scripts.forEach(script => {
+                        const button = document.createElement('button');
+                        button.innerText = script;
+                        button.onclick = () => executeScript(script); // Execute on click
+                        buttonsContainer.appendChild(button);
+                    });
+                })
+                .catch(error => {
+                    console.error('Error loading scripts:', error);
+                });
+        }
+
+        function executeScript(scriptName) {
+            fetch(`http://localhost:8000/scripts/${scriptName}`)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Error fetching script');
+                    }
+                    return response.text(); // Get the script content as text
+                })
+                .then(scriptContent => {
+                    console.log('Script content:', scriptContent); // Log the script content for debugging
+                    // Send the script to the server for execution
+                    return fetch('http://localhost:8000/command', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({ script: scriptContent }), // Send the script content
+                    });
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Error executing script');
+                    }
+                    return response.text();
+                })
+                .then(data => {
+                    console.log(data); // Log server response
+                })
+                .catch(error => {
+                    console.error('Error executing script:', error);
+                });
+        }
+
+        // Poll for scripts every 5 seconds
+        setInterval(loadScriptButtons, 5000);
+
+        // Initial loading of script buttons
+        loadScriptButtons();
+    </script>
+</body>
+</html>
